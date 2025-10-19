@@ -1,0 +1,38 @@
+@import "tailwindcss"; /* This comment imports Tailwind's layer directives for utility generation. */
+:root { /* This comment begins the CSS root scope for global variables. */
+  --rt-background: linear-gradient(135deg, #f6f0ff 0%, #fef7f4 45%, #f0faff 100%); /* This comment defines the pastel backdrop. */
+  --rt-foreground: #2f2a4a; /* This comment defines the deep lavender text color used across the UI. */
+  --rt-accent: linear-gradient(135deg, rgba(162, 216, 247, 0.9), rgba(249, 198, 209, 0.85)); /* This comment stores the soft accent gradient. */
+  --rt-panel: rgba(255, 255, 255, 0.82); /* This comment sets the translucent pastel panel background color. */
+  --rt-border: rgba(200, 213, 235, 0.7); /* This comment sets the border color for glass panels. */
+  --rt-shadow: rgba(148, 163, 184, 0.25); /* This comment stores the panel shadow color. */
+  --rt-scroll-thumb: rgba(184, 203, 233, 0.8); /* This comment sets the scrollbar thumb color. */
+  --rt-scroll-track: rgba(255, 255, 255, 0.35); /* This comment sets the scrollbar track color. */
+} /* This comment closes the root variable block. */
+body { /* This comment declares the global body styles. */
+  background: var(--rt-background); /* This comment applies the pastel gradient background. */
+  color: var(--rt-foreground); /* This comment sets the default text color. */
+  font-family: "Inter", "Segoe UI", system-ui, sans-serif; /* This comment defines the default font stack. */
+  min-height: 100vh; /* This comment ensures the body always fills the viewport height. */
+  background-attachment: fixed; /* This comment keeps gradients anchored for a serene effect. */
+} /* This comment closes the body block. */
+.glass-panel { /* This comment starts a utility class for reusable glass panels. */
+  background: var(--rt-panel); /* This comment applies the translucent background color. */
+  border: 1px solid var(--rt-border); /* This comment adds a subtle border for structure. */
+  box-shadow: 0 22px 50px -20px var(--rt-shadow); /* This comment adds a gentle pastel shadow. */
+  backdrop-filter: blur(24px); /* This comment applies a soft blur to mimic glass. */
+} /* This comment ends the glass-panel utility. */
+.scrollbar-thin::-webkit-scrollbar { /* This comment customizes the scrollbar width on WebKit browsers. */
+  width: 6px; /* This comment sets the scrollbar width to a slim size. */
+} /* This comment closes the rule for the scrollbar element. */
+.scrollbar-thin::-webkit-scrollbar-thumb { /* This comment styles the draggable scrollbar thumb. */
+  background-color: var(--rt-scroll-thumb); /* This comment gives the thumb a pastel tint. */
+  border-radius: 9999px; /* This comment makes the scrollbar thumb fully rounded. */
+} /* This comment ends the scrollbar thumb styling. */
+.scrollbar-thin::-webkit-scrollbar-track { /* This comment styles the scrollbar track. */
+  background-color: var(--rt-scroll-track); /* This comment applies a faint track background. */
+} /* This comment closes the scrollbar track styling. */
+a { /* This comment targets anchor elements globally. */
+  color: inherit; /* This comment ensures links inherit text color by default. */
+  text-decoration: none; /* This comment removes the default underline for a cleaner look. */
+} /* This comment closes the anchor styling block. */
