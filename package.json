@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "ts-node server.ts",
-    "build": "next build",
+    "build": "next build && tsc",
     "start": "NODE_ENV=production ts-node server.js",
     "lint": "eslint"
   },
