@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "ts-node server.ts",
     "build": "next build && tsc",
-    "start": "NODE_ENV=production ts-node server.js",
+    "start": "NODE_ENV=production node dist/server.js",
     "lint": "eslint"
   },
   "dependencies": {
