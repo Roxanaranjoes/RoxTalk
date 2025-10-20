@@ -41,7 +41,10 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       return;
     }
 
-    const socketUrl = process.env.NEXT_PUBLIC_WS_URL || window.location.origin;
+    const socketUrl =
+  process.env.NEXT_PUBLIC_WS_URL?.replace(/\/$/, "") ||
+  (typeof window !== "undefined" ? window.location.origin : "http://localhost:3000");
+
     const nextSocket = io(socketUrl, { withCredentials: true, query: { userId: user._id } });
 
     nextSocket.on("connect", () => {
