@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { z } from "zod";
 import { getAuthenticatedUser } from "../../../lib/auth";
 
-const MAX_AVATAR_LENGTH = 7_000_000;
+const MAX_AVATAR_LENGTH = 18_000_000;
 
 const updateSchema = z.object({
   location: z.string().max(120, "La ubicacion debe tener 120 caracteres o menos.").optional(),

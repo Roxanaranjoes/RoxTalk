@@ -12,7 +12,8 @@ import { Button } from "../../components/ui/Button";
 import { Modal } from "../../components/ui/Modal";
 import { TextArea } from "../../components/ui/TextArea";
 
-const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
+const MAX_AVATAR_SIZE_MB = 12;
+const MAX_AVATAR_BYTES = MAX_AVATAR_SIZE_MB * 1024 * 1024;
 
 const stopStream = (stream: MediaStream | null): void => {
   if (!stream) {
@@ -213,7 +214,7 @@ const ChatLobbyPage: React.FC = () => {
       return;
     }
     if (file.size > MAX_AVATAR_BYTES) {
-      setAvatarError("La imagen debe pesar menos de 5 MB.");
+      setAvatarError(`La imagen debe pesar menos de ${MAX_AVATAR_SIZE_MB} MB.`);
       event.target.value = "";
       return;
     }
@@ -497,7 +498,9 @@ const ChatLobbyPage: React.FC = () => {
                     </Button>
                   ) : null}
                 </div>
-                <span className="text-xs text-[#7a809c]">Formatos permitidos: JPG/PNG. Maximo 5 MB.</span>
+                <span className="text-xs text-[#7a809c]">
+                  Formatos permitidos: JPG/PNG. Maximo {MAX_AVATAR_SIZE_MB} MB.
+                </span>
               </div>
             </div>
             <input ref={avatarFileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarFileChange} />
