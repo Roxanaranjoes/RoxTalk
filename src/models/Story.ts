@@ -7,7 +7,7 @@ export interface StoryDocument extends mongoose.Document {
   content: string;
   images: string[];
   audio?: string;
-  reactions: Record<string, string[]>;
+  reactions: Record<string, string[]> | Map<string, string[]>;
   createdAt: Date;
   expiresAt: Date;
 }

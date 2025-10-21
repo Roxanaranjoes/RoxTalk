@@ -30,7 +30,10 @@ export const Modal: React.FC<ModalProps> = ({
   cancelLabel = "Cancelar",
   hideCloseButton = false
 }) => {
-  const shouldShowCancel = Boolean(cancelLabel && cancelLabel.trim().length > 0);
+  const trimmedCancelLabel = cancelLabel?.trim() ?? "";
+  const trimmedSaveLabel = saveLabel?.trim() ?? "";
+  const shouldShowCancel =
+    trimmedCancelLabel.length > 0 && trimmedCancelLabel.toLocaleLowerCase() !== trimmedSaveLabel.toLocaleLowerCase();
 
   return (
     <div
@@ -67,7 +70,7 @@ export const Modal: React.FC<ModalProps> = ({
         <div className="mt-8 flex justify-end gap-3">
           {shouldShowCancel ? (
             <Button variant="ghost" onClick={onCancel} disabled={isCancelDisabled}>
-              {cancelLabel}
+              {trimmedCancelLabel}
             </Button>
           ) : null}
           <Button

@@ -6,7 +6,13 @@ import { StoryModel, type StoryDocument } from "../../../models/Story";
 import { UserModel } from "../../../models/User";
 import { storyToPayload } from "./index";
 
-const allowedEmojis = ["??", "??", "??", "??", "??"];
+const allowedEmojis = [
+  "\u{1F44D}",
+  "\u{2764}\u{FE0F}",
+  "\u{1F602}",
+  "\u{1F525}",
+  "\u{1F44F}"
+];
 
 const reactionSchema = z.object({
   storyId: z.string().min(1),

@@ -224,7 +224,7 @@ const ChatThreadPage: React.FC = () => {
           isSaveDisabled={false}
           isCancelDisabled={false}
           saveLabel="Cerrar"
-          cancelLabel="Cerrar"
+          cancelLabel=""
         >
           <div className="flex flex-col items-center gap-4 md:flex-row md:items-start">
             <Avatar name={partner.name} imageUrl={partner.avatar} sizeClass="h-24 w-24" />
