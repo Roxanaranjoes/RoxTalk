@@ -2,11 +2,11 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { z } from "zod";
 import { connectToDatabase } from "../../../lib/mongodb";
 import { getAuthenticatedUser } from "../../../lib/auth";
-import { StoryModel } from "../../../models/Story";
+import { StoryModel, type StoryDocument } from "../../../models/Story";
 import { UserModel } from "../../../models/User";
 import { storyToPayload } from "./index";
 
-const allowedEmojis = ["👍", "❤️", "😂", "🔥", "👏"];
+const allowedEmojis = ["??", "??", "??", "??", "??"];
 
 const reactionSchema = z.object({
   storyId: z.string().min(1),
@@ -34,19 +34,19 @@ const reactHandler = async (req: NextApiRequest, res: NextApiResponse): Promise<
   }
   const emoji = parsed.data.emoji;
   if (!allowedEmojis.includes(emoji)) {
-    res.status(400).json({ success: false, error: "Emoji de reacción no permitido." });
+    res.status(400).json({ success: false, error: "Emoji de reaccion no permitido." });
     return;
   }
   await connectToDatabase();
   const story = await StoryModel.findById(parsed.data.storyId);
   if (!story) {
-    res.status(404).json({ success: false, error: "La historia ya no está disponible." });
+    res.status(404).json({ success: false, error: "La historia ya no esta disponible." });
     return;
   }
   const isExpired = story.createdAt.getTime() < Date.now() - cutoffMs;
   if (isExpired) {
     await story.deleteOne();
-    res.status(410).json({ success: false, error: "La historia expiró." });
+    res.status(410).json({ success: false, error: "La historia expiro." });
     return;
   }
   const userId = String(user._id);
@@ -77,7 +77,7 @@ const reactHandler = async (req: NextApiRequest, res: NextApiResponse): Promise<
   if (authorDoc) {
     authorMap.set(String(authorDoc._id), { name: authorDoc.name, email: authorDoc.email });
   }
-  const payload = storyToPayload(story, authorMap);
+  const payload = storyToPayload(story as StoryDocument, authorMap);
   res.status(200).json({ success: true, data: payload });
 };
 

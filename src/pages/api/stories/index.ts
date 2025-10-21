@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { z } from "zod";
 import { connectToDatabase } from "../../../lib/mongodb";
 import { getAuthenticatedUser } from "../../../lib/auth";
-import { StoryModel } from "../../../models/Story";
+import { StoryModel, type StoryDocument } from "../../../models/Story";
 import { UserModel } from "../../../models/User";
 
 const MAX_IMAGE_COUNT = 4;
@@ -48,10 +48,7 @@ const sanitizeAudio = (audio?: string): string => {
   return audio;
 };
 
-export const storyToPayload = (story: Awaited<ReturnType<typeof StoryModel.findById>>, authorMap: Map<string, { name: string; email: string }>) => {
-  if (!story) {
-    return null;
-  }
+export const storyToPayload = (story: StoryDocument, authorMap: Map<string, { name: string; email: string }>) => {
   const reactionsMap: Record<string, string[]> = {};
   if (story.reactions) {
     const entries = story.reactions instanceof Map ? story.reactions.entries() : Object.entries(story.reactions as unknown as Record<string, string[]>);
@@ -90,9 +87,7 @@ const storiesHandler = async (req: NextApiRequest, res: NextApiResponse): Promis
       accumulator.set(String(doc._id), { name: doc.name, email: doc.email });
       return accumulator;
     }, new Map());
-    const payload = stories
-      .map((story) => storyToPayload(story, authorMap))
-      .filter((story): story is NonNullable<typeof story> => story !== null);
+    const payload = stories.map((story) => storyToPayload(story as StoryDocument, authorMap));
     res.status(200).json({ success: true, data: payload });
     return;
   }
@@ -120,7 +115,7 @@ const storiesHandler = async (req: NextApiRequest, res: NextApiResponse): Promis
     });
     const authorMap = new Map<string, { name: string; email: string }>();
     authorMap.set(String(user._id), { name: user.name, email: user.email });
-    const payload = storyToPayload(story, authorMap);
+    const payload = storyToPayload(story as StoryDocument, authorMap);
     res.status(201).json({ success: true, data: payload });
     return;
   }

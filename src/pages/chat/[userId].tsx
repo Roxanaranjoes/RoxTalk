@@ -153,6 +153,7 @@ const ChatThreadPage: React.FC = () => {
         toUserId: partner._id,
         content: trimmedContent,
         roomId: buildRoomId(user._id, partner._id),
+        attachments: [],
         createdAt: new Date().toISOString()
       };
       setMessages((previous) => [...previous, optimisticMessage]);
