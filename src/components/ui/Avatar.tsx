@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 // This line imports React so we can define a functional component with JSX.
 import React from "react";
 
@@ -9,6 +10,8 @@ export interface AvatarProps {
   isOnline?: boolean;
   // This line defines an optional class that customizes the avatar size.
   sizeClass?: string;
+  // This line defines an optional image URL or data URL to render instead of initials.
+  imageUrl?: string;
 }
 
 // This line implements a helper that converts a name into uppercase initials.
@@ -27,16 +30,21 @@ const getInitials = (name: string): string => {
 export const Avatar: React.FC<AvatarProps> = ({
   name,
   isOnline = false,
-  sizeClass = "h-12 w-12"
+  sizeClass = "h-12 w-12",
+  imageUrl
 }) => {
   // This line computes the initials text using the helper function.
   const initials = getInitials(name);
   // This line assembles the Tailwind classes that style the circular avatar background.
-  const avatarClasses = `${sizeClass} relative flex items-center justify-center rounded-full border border-[#d4dcf8] bg-gradient-to-br from-[#cde4ff] via-[#f3e0ff] to-[#ffe0f4] text-[#2f2a4a] font-semibold uppercase shadow-lg shadow-[rgba(169,184,209,0.35)] backdrop-blur`.trim();
+  const avatarClasses = `${sizeClass} relative flex items-center justify-center overflow-hidden rounded-full border border-[#d4dcf8] bg-gradient-to-br from-[#cde4ff] via-[#f3e0ff] to-[#ffe0f4] text-[#2f2a4a] font-semibold uppercase shadow-lg shadow-[rgba(169,184,209,0.35)] backdrop-blur`.trim();
   // This line returns the JSX structure for the avatar.
   return (
     <div className={avatarClasses}>
-      <span>{initials || "?"}</span>
+      {imageUrl ? (
+        <img src={imageUrl} alt={name} className="h-full w-full object-cover" />
+      ) : (
+        <span>{initials || "?"}</span>
+      )}
       <span
         className={`absolute bottom-1 right-1 h-3 w-3 rounded-full border border-white/80 ${isOnline ? "bg-emerald-300" : "bg-[#c0c6da]"}`}
       />

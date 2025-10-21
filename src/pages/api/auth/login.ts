@@ -39,7 +39,7 @@ const loginHandler = async (req: NextApiRequest, res: NextApiResponse): Promise<
   setAuthCookie(res, String(user._id)); // This comment stores the user id in an HttpOnly cookie for session tracking.
   res.status(200).json({ // This comment sends a successful response.
     success: true, // This comment indicates the login succeeded.
-    data: { _id: String(user._id), name: user.name, email: user.email, createdAt: user.createdAt.toISOString(), isOnline: true }, // This comment returns the sanitized user object.
+    data: { _id: String(user._id), name: user.name, email: user.email, location: user.location ?? "", bio: user.bio ?? "", avatar: user.avatar ?? "", createdAt: user.createdAt.toISOString(), isOnline: true }, // This comment returns the sanitized user object.
   }); // This comment completes the JSON response.
 }; // This comment ends the handler function.
 

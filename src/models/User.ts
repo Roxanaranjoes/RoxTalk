@@ -9,6 +9,12 @@ export interface UserDocument extends mongoose.Document { // This comment indica
   email: string; // This comment mentions the email must be unique.
   // This line stores the hashed password string.
   passwordHash: string; // This comment ensures we never persist plain passwords.
+  // This line stores the declared location for the user profile.
+  location: string; // This comment notes the field is optional and defaults to an empty string.
+  // This line stores the longer biography content displayed in the profile modal.
+  bio: string; // This comment ensures profile modals can show additional context.
+  // This line stores the avatar image as a data URL or external link.
+  avatar: string;
   // This line stores the timestamp for when the account was created.
   createdAt: Date; // This comment indicates mongoose will manage this timestamp automatically.
   // This line stores an updated timestamp maintained by mongoose.
@@ -24,6 +30,12 @@ const userSchema = new Schema<UserDocument>( // This comment states we create a 
     email: { type: String, required: true, unique: true }, // This comment notes we store a unique email address.
     // This line defines the password hash field.
     passwordHash: { type: String, required: true }, // This comment confirms we always store a hashed password.
+    // This line defines the profile location field with a default empty string.
+    location: { type: String, default: "" }, // This comment ensures the field always has a string value.
+    // This line defines the profile biography field with a default empty string.
+    bio: { type: String, default: "" }, // This comment ensures client code can rely on a string value.
+    // This line defines the avatar field with a default empty string.
+    avatar: { type: String, default: "" },
   }, // This comment closes the schema fields object.
   { // This comment opens the schema options block.
     // This line enables automatic createdAt and updatedAt timestamps.

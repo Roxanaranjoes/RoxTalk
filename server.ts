@@ -33,7 +33,7 @@ const handle = app.getRequestHandler(); // This comment retrieves Next.js reques
 const port = parseInt(process.env.PORT || "3000", 10); // This comment ensures we have a numeric port with a default of 3000.
 
 type RoomPayload = { otherUserId: string };
-type MessagePayload = { fromUserId: string; toUserId: string; content: string };
+type MessagePayload = { fromUserId: string; toUserId: string; content: string; attachments?: string[] };
 type TypingPayload = { userId: string; isTyping: boolean };
 
 const isRoomPayload = (value: unknown): value is RoomPayload => {
@@ -45,7 +45,15 @@ const isMessagePayload = (value: unknown): value is MessagePayload => {
     return false;
   }
   const payload = value as Partial<MessagePayload>;
-  return typeof payload.fromUserId === "string" && typeof payload.toUserId === "string" && typeof payload.content === "string";
+  const attachmentsValid =
+    payload.attachments === undefined ||
+    (Array.isArray(payload.attachments) && payload.attachments.every((item) => typeof item === "string"));
+  return (
+    typeof payload.fromUserId === "string" &&
+    typeof payload.toUserId === "string" &&
+    typeof payload.content === "string" &&
+    attachmentsValid
+  );
 };
 
 const isTypingPayload = (value: unknown): value is TypingPayload => {
@@ -54,6 +62,31 @@ const isTypingPayload = (value: unknown): value is TypingPayload => {
   }
   const payload = value as Partial<TypingPayload>;
   return typeof payload.userId === "string" && typeof payload.isTyping === "boolean";
+};
+
+const MAX_ATTACHMENTS = 4;
+const MAX_ATTACHMENT_LENGTH = 7_000_000; // Approximately 5 MB when considering base64 expansion.
+const sanitizeAttachments = (attachments?: string[]): string[] => {
+  if (!Array.isArray(attachments)) {
+    return [];
+  }
+  const sanitized: string[] = [];
+  for (const item of attachments) {
+    if (typeof item !== "string") {
+      continue;
+    }
+    if (!item.startsWith("data:image/")) {
+      continue;
+    }
+    if (item.length > MAX_ATTACHMENT_LENGTH) {
+      continue;
+    }
+    sanitized.push(item);
+    if (sanitized.length >= MAX_ATTACHMENTS) {
+      break;
+    }
+  }
+  return sanitized;
 };
 
 // This line prepares the Next.js app, after which we start the HTTP and Socket.IO servers.
@@ -110,7 +143,12 @@ app.prepare().then(async () => { // This comment waits for Next.js to build or l
     });
 
     socket.on("message:send", async (payload) => {
-      if (!isMessagePayload(payload) || payload.fromUserId !== userId || !payload.content.trim()) {
+      if (!isMessagePayload(payload) || payload.fromUserId !== userId) {
+        return;
+      }
+      const trimmedContent = payload.content.trim();
+      const attachments = sanitizeAttachments(payload.attachments);
+      if (!trimmedContent && attachments.length === 0) {
         return;
       }
       const roomId = buildRoomId(payload.fromUserId, payload.toUserId);
@@ -118,7 +156,8 @@ app.prepare().then(async () => { // This comment waits for Next.js to build or l
       const message = await MessageModel.create({ // This comment persists the message document in MongoDB.
         fromUserId: payload.fromUserId, // This comment sets the sender id.
         toUserId: payload.toUserId, // This comment sets the recipient id.
-        content: payload.content.trim(), // This comment stores the trimmed message content.
+        content: trimmedContent, // This comment stores the trimmed message content.
+        attachments, // This comment stores sanitized attachments for the message.
         roomId, // This comment stores the room id for quick retrieval.
       }); // This comment completes the message creation.
       const serializedMessage = { // This comment prepares the payload to broadcast.
@@ -126,6 +165,7 @@ app.prepare().then(async () => { // This comment waits for Next.js to build or l
         fromUserId: message.fromUserId, // This comment includes the sender id.
         toUserId: message.toUserId, // This comment includes the recipient id.
         content: message.content, // This comment includes the message content.
+        attachments: message.attachments || [], // This comment includes the message attachments.
         roomId: message.roomId, // This comment includes the room id.
         createdAt: message.createdAt.toISOString(), // This comment serializes the timestamp.
       }; // This comment closes the serialized message object.

@@ -37,7 +37,7 @@ const registerHandler = async (req: NextApiRequest, res: NextApiResponse): Promi
   setAuthCookie(res, String(user._id)); // This comment stores the user id in a secure HttpOnly cookie.
   res.status(201).json({ // This comment prepares the successful response.
     success: true, // This comment indicates the registration succeeded.
-    data: { _id: String(user._id), name: user.name, email: user.email, createdAt: user.createdAt.toISOString(), isOnline: true }, // This comment returns the sanitized user profile.
+    data: { _id: String(user._id), name: user.name, email: user.email, location: user.location ?? "", bio: user.bio ?? "", avatar: user.avatar ?? "", createdAt: user.createdAt.toISOString(), isOnline: true }, // This comment returns the sanitized user profile.
   }); // This comment ends the JSON response.
 }; // This comment closes the handler function.
 

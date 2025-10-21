@@ -38,6 +38,7 @@ const historyHandler = async (req: NextApiRequest, res: NextApiResponse): Promis
     fromUserId: message.fromUserId, // This comment includes the sender id.
     toUserId: message.toUserId, // This comment includes the recipient id.
     content: message.content, // This comment includes the message content.
+    attachments: message.attachments || [], // This comment includes any photo attachments.
     roomId: message.roomId, // This comment includes the room id for reference.
     createdAt: message.createdAt.toISOString(), // This comment serializes the creation timestamp.
   })); // This comment finishes mapping messages.

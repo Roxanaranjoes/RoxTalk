@@ -5,7 +5,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { useRouter } from "next/router";
 
 // This line imports shared types used by the context to describe API responses and user objects.
-import type { ApiResponse, User } from "../types";
+import type { ApiResponse, UpdateProfileRequest, User } from "../types";
 
 // This line defines the shape of the authentication context value exposed to components.
 interface AuthContextValue {
@@ -19,6 +19,8 @@ interface AuthContextValue {
   register: (name: string, email: string, password: string) => Promise<ApiResponse<User>>;
   // This line exposes the logout helper that clears the user session.
   logout: () => Promise<void>;
+  // This line exposes the profile update helper that patches the current user's details.
+  updateProfile: (profile: UpdateProfileRequest) => Promise<ApiResponse<User>>;
 }
 
 // This line creates the authentication context with an undefined default to detect misuse.
@@ -102,8 +104,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       router.replace("/login");
     }
   };
+  // This line defines the updateProfile helper that persists modal edits to the server.
+  const updateProfile = async (profile: UpdateProfileRequest): Promise<ApiResponse<User>> => {
+    try {
+      const response = await fetch("/api/users/me", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(profile)
+      });
+      const data: ApiResponse<User> = await response.json();
+      if (data.success && data.data) {
+        setUser(data.data);
+      }
+      return data;
+    } catch {
+      return { success: false, error: "No se pudo actualizar el perfil. Intenta nuevamente." };
+    }
+  };
   // This line memoizes the context value object combining state and helpers.
-  const contextValue: AuthContextValue = { user, isLoading, login, register, logout };
+  const contextValue: AuthContextValue = { user, isLoading, login, register, logout, updateProfile };
   // This line returns the provider component that wraps its children with the context value.
   return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;
 };

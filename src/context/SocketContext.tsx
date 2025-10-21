@@ -82,11 +82,12 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
 
     const handleNewMessage = (message: ChatMessage) => {
-      setLatestMessages((previous) => ({ ...previous, [message.roomId]: message }));
-      if (message.fromUserId !== user._id) {
+      const normalizedMessage: ChatMessage = { ...message, attachments: message.attachments ?? [] };
+      setLatestMessages((previous) => ({ ...previous, [normalizedMessage.roomId]: normalizedMessage }));
+      if (normalizedMessage.fromUserId !== user._id) {
         setUnreadCounts((previous) => ({
           ...previous,
-          [message.fromUserId]: (previous[message.fromUserId] || 0) + 1
+          [normalizedMessage.fromUserId]: (previous[normalizedMessage.fromUserId] || 0) + 1
         }));
       }
     };

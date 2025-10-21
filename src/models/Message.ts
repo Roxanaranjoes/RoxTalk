@@ -8,7 +8,9 @@ export interface MessageDocument extends mongoose.Document { // This comment cla
   // This line stores the recipient user id.
   toUserId: string; // This comment indicates who receives the message.
   // This line stores the actual message text content.
-  content: string; // This comment clarifies we only handle text payloads here.
+  content: string; // This comment clarifies we keep text even when photos are attached.
+  // This line stores the collection of attachment URLs or data strings.
+  attachments: string[]; // This comment enables photo messages by keeping base64 strings or URLs.
   // This line stores the derived room identifier for quick lookups.
   roomId: string; // This comment states we persist a deterministic room id.
   // This line stores the timestamp when the message was created.
@@ -25,7 +27,9 @@ const messageSchema = new Schema<MessageDocument>( // This comment highlights th
     // This line defines the recipient field as a required string.
     toUserId: { type: String, required: true }, // This comment ensures the message has a target user.
     // This line defines the message content field.
-    content: { type: String, required: true }, // This comment confirms messages must contain text.
+    content: { type: String, default: "" }, // This comment allows empty text when only photos are sent.
+    // This line defines the attachments array with a default of an empty list.
+    attachments: { type: [String], default: [] }, // This comment keeps serialized image data or URLs.
     // This line defines the deterministic room identifier used for grouping.
     roomId: { type: String, required: true, index: true }, // This comment adds an index for faster room queries.
   }, // This comment closes the fields block.

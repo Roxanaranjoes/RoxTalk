@@ -6,6 +6,12 @@ export interface User { // This comment clarifies that User represents the publi
   name: string; // This comment ensures UI components can show the user's name.
   // This line stores the unique email address.
   email: string; // This comment states the email doubles as a login credential.
+  // This line stores the declared location for the profile.
+  location: string; // This comment notes the field may be empty if the user has not provided it.
+  // This line stores the longer biography text for the profile.
+  bio: string; // This comment ensures the modal can show richer context.
+  // This line stores the optional avatar data URL or remote path.
+  avatar: string;
   // This line stores the creation timestamp in ISO format.
   createdAt: string; // This comment clarifies dates are serialized as strings for JSON.
 } // This comment closes the User interface.
@@ -27,10 +33,55 @@ export interface ChatMessage { // This comment notes that ChatMessage mirrors th
   // This line stores the sorted room id derived from both user ids.
   roomId: string; // This comment allows grouping messages inside the conversation.
   // This line stores the textual message content.
-  content: string; // This comment clarifies we only support text messages in this MVP.
+  content: string; // This comment keeps any text that accompanies photo attachments.
+  // This line stores the attachments for the message such as base64 photo data.
+  attachments: string[]; // This comment ensures clients can render photo messages.
   // This line stores the creation timestamp string.
   createdAt: string; // This comment ensures we render relative or formatted times.
 } // This comment closes the ChatMessage interface.
+
+// This line defines the author data returned with each story.
+export interface StoryAuthor {
+  // This line stores the display name for the author.
+  name: string;
+  // This line stores the email of the author.
+  email: string;
+}
+
+// This line defines the story object for ephemeral publications.
+export interface Story {
+  // This line stores the story identifier.
+  _id: string;
+  // This line stores the owner id.
+  userId: string;
+  // This line stores the textual content.
+  content: string;
+  // This line stores image attachments (base64 data URLs).
+  images: string[];
+  // This line stores the optional audio attachment (base64 data URL).
+  audio: string;
+  // This line stores the reaction map keyed by emoji.
+  reactions: Record<string, string[]>;
+  // This line stores the creation timestamp.
+  createdAt: string;
+  // This line stores the expiration timestamp (24h after creation).
+  expiresAt: string;
+  // This line stores the author info for convenient rendering.
+  author: StoryAuthor;
+}
+
+// This line defines the payload for creating a story.
+export interface CreateStoryRequest {
+  content?: string;
+  images?: string[];
+  audio?: string;
+}
+
+// This line defines the payload for reacting to a story.
+export interface ReactStoryRequest {
+  storyId: string;
+  emoji: string;
+}
 
 // This line defines a reusable API response envelope.
 export interface ApiResponse<T> { // This comment states the generic type T holds the payload.
@@ -60,6 +111,16 @@ export interface RegisterRequest { // This comment indicates the register form f
   password: string; // This comment clarifies the password is hashed before persistence.
 } // This comment closes the RegisterRequest interface.
 
+// This line defines the request shape for updating a user profile.
+export interface UpdateProfileRequest { // This comment states the fields editable from the profile modal.
+  // This line stores the profile location string.
+  location: string; // This comment notes the field is optional but represented as a string.
+  // This line stores the profile biography body text.
+  bio: string; // This comment clarifies that the biography is plain text.
+  // This line stores the optional avatar data URL.
+  avatar: string;
+} // This comment closes the UpdateProfileRequest interface.
+
 // This line defines the payload emitted when sending a websocket message.
 export interface OutgoingMessagePayload { // This comment states this shape is sent from client to server.
   // This line stores the sender id.
@@ -67,7 +128,9 @@ export interface OutgoingMessagePayload { // This comment states this shape is s
   // This line stores the recipient id.
   toUserId: string; // This comment directs the server to the correct conversation.
   // This line stores the textual content.
-  content: string; // This comment clarifies the payload is plain text.
+  content: string; // This comment carries optional message text even when only photos are sent.
+  // This line optionally stores attachments such as images encoded as data URLs.
+  attachments?: string[]; // This comment enables sending photos alongside text.
 } // This comment closes the OutgoingMessagePayload interface.
 
 // This line defines the websocket event names used by the client.

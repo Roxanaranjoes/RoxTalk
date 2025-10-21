@@ -21,6 +21,9 @@ const listUsersHandler = async (req: NextApiRequest, res: NextApiResponse): Prom
     _id: String(user._id), // This comment serializes the user id.
     name: user.name, // This comment includes the display name.
     email: user.email, // This comment includes the email address.
+    location: user.location ?? "", // This comment adds the profile location.
+    bio: user.bio ?? "", // This comment adds the profile biography.
+    avatar: user.avatar ?? "",
     createdAt: user.createdAt.toISOString(), // This comment serializes the creation timestamp.
   })); // This comment closes the mapping to sanitized users.
   res.status(200).json({ success: true, data: sanitizedUsers }); // This comment returns the sanitized user list.
