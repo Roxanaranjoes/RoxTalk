@@ -435,11 +435,16 @@ const StoriesPage: React.FC = () => {
         body: JSON.stringify(payload)
       });
       const data: ApiResponse<Story> = await response.json();
-      if (!data.success || !data.data) {
+      if (!data.success) {
         setFormError(data.error || "No pudimos publicar tu historia.");
         return;
       }
-      setStories((previous) => [data.data, ...previous]);
+      const newStory = data.data;
+      if (!newStory) {
+        setFormError("No pudimos publicar tu historia.");
+        return;
+      }
+      setStories((previous) => [newStory, ...previous]);
       resetForm();
     } catch {
       setFormError("Ocurrio un error al publicar tu historia.");
