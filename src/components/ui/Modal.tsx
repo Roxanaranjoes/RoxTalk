@@ -13,6 +13,7 @@ export interface ModalProps {
   isCancelDisabled?: boolean;
   saveLabel?: string;
   cancelLabel?: string;
+  hideCloseButton?: boolean;
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -26,7 +27,8 @@ export const Modal: React.FC<ModalProps> = ({
   isSaveDisabled = false,
   isCancelDisabled = false,
   saveLabel = "Guardar",
-  cancelLabel = "Cancelar"
+  cancelLabel = "Cancelar",
+  hideCloseButton = false
 }) => {
   const shouldShowCancel = Boolean(cancelLabel && cancelLabel.trim().length > 0);
 
@@ -48,14 +50,16 @@ export const Modal: React.FC<ModalProps> = ({
             <h2 className="text-2xl font-semibold">{title}</h2>
             {description ? <p className="mt-2 text-sm text-[#6f7a9c]">{description}</p> : null}
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-full border border-transparent p-2 text-[#7a809c] transition hover:border-[#cfd8f6] hover:bg-white/70 hover:text-[#2f2a4a]"
-            aria-label="Cerrar modal"
-          >
-            <span aria-hidden="true">&times;</span>
-          </button>
+          {hideCloseButton ? null : (
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-full border border-transparent p-2 text-[#7a809c] transition hover:border-[#cfd8f6] hover:bg-white/70 hover:text-[#2f2a4a]"
+              aria-label="Cerrar modal"
+            >
+              <span aria-hidden="true">&times;</span>
+            </button>
+          )}
         </div>
         <div className="mt-6 space-y-5 text-sm text-[#4b5375]">
           {children}

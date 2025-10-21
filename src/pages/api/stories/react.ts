@@ -70,7 +70,12 @@ const reactHandler = async (req: NextApiRequest, res: NextApiResponse): Promise<
     updatedList.push(userId);
     currentMap.set(emoji, updatedList);
   }
-  story.reactions = currentMap;
+  const reactionsObject = Array.from(currentMap.entries()).reduce<Record<string, string[]>>((accumulator, [key, ids]) => {
+    accumulator[key] = ids;
+    return accumulator;
+  }, {});
+  story.reactions = reactionsObject;
+  story.markModified("reactions");
   await story.save();
   const authorDoc = await UserModel.findById(story.userId);
   const authorMap = new Map<string, { name: string; email: string }>();

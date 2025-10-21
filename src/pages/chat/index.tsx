@@ -542,6 +542,7 @@ const ChatLobbyPage: React.FC = () => {
           isCancelDisabled={false}
           saveLabel="Cerrar"
           cancelLabel=""
+          hideCloseButton
         >
           <div className="flex flex-col items-center gap-4 md:flex-row md:items-start">
             <Avatar name={viewingContact.name} imageUrl={viewingContact.avatar} sizeClass="h-24 w-24" />
