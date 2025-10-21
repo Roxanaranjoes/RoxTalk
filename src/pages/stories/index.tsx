@@ -9,7 +9,8 @@ import { Button } from "../../components/ui/Button";
 import { Modal } from "../../components/ui/Modal";
 
 const MAX_IMAGES = 4;
-const MAX_IMAGE_BYTES = 7 * 1024 * 1024;
+const MAX_IMAGE_SIZE_MB = 12;
+const MAX_IMAGE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
 const MAX_AUDIO_BYTES = 12 * 1024 * 1024;
 const allowedReactions = ["\u{1F44D}", "\u{2764}\u{FE0F}", "\u{1F602}", "\u{1F525}", "\u{1F44F}"];
 
@@ -191,7 +192,7 @@ const StoriesPage: React.FC = () => {
     const conversions = await Promise.allSettled(
       selected.map(async (file) => {
         if (file.size > MAX_IMAGE_BYTES) {
-          throw new Error("Cada imagen debe pesar menos de 7 MB.");
+          throw new Error(`Cada imagen debe pesar menos de ${MAX_IMAGE_SIZE_MB} MB.`);
         }
         const dataUrl = await toDataUrl(file);
         if (!dataUrl.startsWith("data:image/")) {
@@ -566,7 +567,9 @@ const StoriesPage: React.FC = () => {
                   className="mt-2 block w-full rounded-2xl border border-dashed border-[#cfd8f6] bg-white/70 px-4 py-6 text-sm text-[#6f7a9c]"
                   onChange={(event) => void addImagesFromFiles(event.target.files)}
                 />
-                <span className="mt-2 block text-xs text-[#7a809c]">Hasta {MAX_IMAGES} imagenes, maximo 7 MB cada una.</span>
+                <span className="mt-2 block text-xs text-[#7a809c]">
+                  Hasta {MAX_IMAGES} imagenes, maximo {MAX_IMAGE_SIZE_MB} MB cada una.
+                </span>
               </label>
               <label className="md:w-1/2">
                 <span className="text-sm font-medium text-[#2f2a4a]">Nota de voz</span>

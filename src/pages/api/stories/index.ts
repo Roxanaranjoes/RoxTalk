@@ -6,7 +6,8 @@ import { StoryModel, type StoryDocument } from "../../../models/Story";
 import { UserModel } from "../../../models/User";
 
 const MAX_IMAGE_COUNT = 4;
-const MAX_IMAGE_LENGTH = 7_000_000;
+const MAX_IMAGE_SIZE_BYTES = 12 * 1024 * 1024;
+const MAX_IMAGE_LENGTH = 20_000_000;
 const MAX_AUDIO_LENGTH = 12_000_000;
 
 const createStorySchema = z.object({
@@ -14,6 +15,12 @@ const createStorySchema = z.object({
   images: z.array(z.string()).max(MAX_IMAGE_COUNT).optional(),
   audio: z.string().optional()
 });
+
+const dataUrlPayloadSize = (dataUrl: string): number => {
+  const [, payload = ""] = dataUrl.split(",");
+  const cleaned = payload.replace(/=+$/, "");
+  return Math.floor((cleaned.length * 3) / 4);
+};
 
 const sanitizeImages = (images: string[] = []): string[] => {
   const sanitized: string[] = [];
@@ -25,6 +32,9 @@ const sanitizeImages = (images: string[] = []): string[] => {
       continue;
     }
     if (item.length > MAX_IMAGE_LENGTH) {
+      continue;
+    }
+    if (dataUrlPayloadSize(item) > MAX_IMAGE_SIZE_BYTES) {
       continue;
     }
     sanitized.push(item);
