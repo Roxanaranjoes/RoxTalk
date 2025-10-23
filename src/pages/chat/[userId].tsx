@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/router";
+import Image from "next/image";
 import { useAuth } from "../../context/AuthContext";
 import { useSocket } from "../../context/SocketContext";
 import type { ChatMessage, User } from "../../types";
@@ -10,6 +11,26 @@ import { Button } from "../../components/ui/Button";
 import { Avatar } from "../../components/ui/Avatar";
 import { Toast } from "../../components/Toast";
 import { buildRoomId } from "../../lib/rooms";
+
+const MAX_TOTAL_ATTACHMENTS = 4;
+const MAX_ATTACHMENT_SIZE_BYTES = 5 * 1024 * 1024;
+
+const readFileAsDataUrl = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result);
+      } else {
+        reject(new Error("No se pudo procesar la imagen seleccionada."));
+      }
+    };
+    reader.onerror = () => {
+      reject(reader.error || new Error("No se pudo procesar la imagen seleccionada."));
+    };
+    reader.readAsDataURL(file);
+  });
+};
 
 const ChatThreadPage: React.FC = () => {
   const router = useRouter();
@@ -26,6 +47,10 @@ const ChatThreadPage: React.FC = () => {
   const [toastVariant, setToastVariant] = useState<"info" | "success" | "error">("info");
   const [isPartnerModalOpen, setIsPartnerModalOpen] = useState<boolean>(false);
   const [typingTimeoutId, setTypingTimeoutId] = useState<number | null>(null);
+  const [attachments, setAttachments] = useState<string[]>([]);
+  const galleryInputRef = useRef<HTMLInputElement | null>(null);
+  const cameraInputRef = useRef<HTMLInputElement | null>(null);
+  const messageEndRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (isLoading) {
@@ -117,6 +142,62 @@ const ChatThreadPage: React.FC = () => {
     };
   }, [socket, user, partnerId, markConversationAsRead]);
 
+  useEffect(() => {
+    messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const handleAttachmentSelection = async (event: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
+    const files = Array.from(event.target.files ?? []);
+    event.target.value = "";
+    if (files.length === 0) {
+      return;
+    }
+    const availableSlots = MAX_TOTAL_ATTACHMENTS - attachments.length;
+    if (availableSlots <= 0) {
+      setToastVariant("error");
+      setToastMessage(`Solo puedes adjuntar ${MAX_TOTAL_ATTACHMENTS} imágenes por mensaje.`);
+      return;
+    }
+
+    const collected: string[] = [];
+    const errors: string[] = [];
+
+    for (const file of files) {
+      if (collected.length >= availableSlots) {
+        break;
+      }
+      if (!file.type.startsWith("image/")) {
+        errors.push(`${file.name} no es una imagen compatible.`);
+        continue;
+      }
+      if (file.size > MAX_ATTACHMENT_SIZE_BYTES) {
+        errors.push(`${file.name} supera el límite de 5 MB.`);
+        continue;
+      }
+      try {
+        const dataUrl = await readFileAsDataUrl(file);
+        collected.push(dataUrl);
+      } catch {
+        errors.push(`No se pudo procesar ${file.name}.`);
+      }
+    }
+
+    if (collected.length > 0) {
+      setAttachments((previous) => [...previous, ...collected]);
+    }
+    if (errors.length > 0) {
+      setToastVariant("error");
+      setToastMessage(errors.join(" "));
+    } else {
+      setToastMessage("");
+    }
+  };
+
+  const handleRemoveAttachment = (index: number): void => {
+    setAttachments((previous) => previous.filter((_, currentIndex) => currentIndex !== index));
+    setToastMessage("");
+  };
+
   const handleMessageChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
     const value = event.target.value;
     setMessageInput(value);
@@ -141,24 +222,34 @@ const ChatThreadPage: React.FC = () => {
 
   const handleSendMessage = async (event: React.FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
-    if (!socket || !user || !partner || messageInput.trim().length === 0) {
+    if (!socket || !user || !partner) {
+      return;
+    }
+    const trimmedContent = messageInput.trim();
+    if (trimmedContent.length === 0 && attachments.length === 0) {
       return;
     }
     try {
       setIsSending(true);
-      const trimmedContent = messageInput.trim();
+      const attachmentsToSend = attachments.slice(0, MAX_TOTAL_ATTACHMENTS);
       const optimisticMessage: ChatMessage = {
         _id: `temp-${Date.now()}`,
         fromUserId: user._id,
         toUserId: partner._id,
         content: trimmedContent,
         roomId: buildRoomId(user._id, partner._id),
-        attachments: [],
+        attachments: attachmentsToSend,
         createdAt: new Date().toISOString()
       };
       setMessages((previous) => [...previous, optimisticMessage]);
       setMessageInput("");
-      socket.emit("message:send", { fromUserId: user._id, toUserId: partner._id, content: trimmedContent });
+      setAttachments([]);
+      socket.emit("message:send", {
+        fromUserId: user._id,
+        toUserId: partner._id,
+        content: trimmedContent,
+        attachments: attachmentsToSend
+      });
       socket.emit("typing:stop", { userId: partner._id, isTyping: false });
       if (typingTimeoutId) {
         window.clearTimeout(typingTimeoutId);
@@ -183,8 +274,8 @@ const ChatThreadPage: React.FC = () => {
   const remoteTyping = partnerId ? Boolean(typingState[partnerId]) : false;
 
   return (
-    <div className="flex min-h-screen flex-col gap-6 px-4 py-6 md:px-12 md:py-10">
-      <header className="flex flex-col items-start gap-3 rounded-3xl border border-sky-200/60 bg-gradient-to-r from-white/85 to-[#f1f4ff]/70 px-6 py-6 text-[#6b7598] md:flex-row md:items-center md:justify-between md:gap-6">
+    <div className="mx-auto flex w-full max-w-5xl min-h-screen flex-col gap-6 px-4 py-6 sm:px-6 md:px-12 md:py-10">
+      <header className="flex w-full flex-col items-start gap-3 rounded-3xl border border-sky-200/60 bg-gradient-to-r from-white/85 to-[#f1f4ff]/70 px-6 py-6 text-[#6b7598] md:flex-row md:items-center md:justify-between md:gap-6">
         <div className="flex items-center gap-4">
           <Avatar
             name={partner?.name || "RoxTalk User"}
@@ -241,26 +332,123 @@ const ChatThreadPage: React.FC = () => {
       {toastMessage ? (
         <Toast message={toastMessage} variant={toastVariant} onClose={() => setToastMessage("")} />
       ) : null}
-      <Card className="glass-panel flex h-[60vh] flex-col overflow-hidden p-0">
+      <Card className="glass-panel flex h-[60vh] min-h-[28rem] w-full flex-col overflow-hidden p-0">
         <div className="flex-1 space-y-4 overflow-y-auto px-6 py-6 scrollbar-thin">
           {messages.length === 0 ? (
             <p className="text-center text-sm text-[#7a809c]">Aqui veras la conversacion en cuanto envies un mensaje.</p>
           ) : null}
           {messages.map((message) => {
             const isOwnMessage = user ? message.fromUserId === user._id : false;
+            const hasAttachments = Array.isArray(message.attachments) && message.attachments.length > 0;
+            const hasText = message.content.trim().length > 0;
+            const spacingClass = hasAttachments && hasText ? "space-y-4" : hasAttachments ? "space-y-3" : "";
+            const paletteClass = isOwnMessage
+              ? "bg-gradient-to-r from-[#c7d2fe] to-[#f5cdfa] text-[var(--rt-foreground)]"
+              : "bg-white/85 text-[var(--rt-foreground)] border border-[#dbe1f7]";
             return (
               <div key={message._id} className={`flex ${isOwnMessage ? "justify-end" : "justify-start"}`}>
-                <div className={`max-w-[70%] rounded-3xl px-5 py-3 text-sm leading-relaxed shadow-lg shadow-[rgba(169,184,209,0.25)] ${isOwnMessage ? "bg-gradient-to-r from-[#c7d2fe] to-[#f5cdfa] text-[var(--rt-foreground)]" : "bg-white/85 text-[var(--rt-foreground)] border border-[#dbe1f7]"}`}>
-                  <p className="whitespace-pre-wrap break-words">{message.content}</p>
-                  <span className="mt-2 block text-right text-xs text-[#8a93b8]">{new Date(message.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                <div
+                  className={`max-w-full sm:max-w-[70%] rounded-3xl px-5 py-3 text-sm leading-relaxed shadow-lg shadow-[rgba(169,184,209,0.25)] ${paletteClass} ${spacingClass}`.trim()}
+                >
+                  {hasAttachments ? (
+                    <div className={`grid gap-2 ${message.attachments.length > 1 ? "sm:grid-cols-2" : ""}`}>
+                      {message.attachments.map((attachment, index) => (
+                        <div
+                          key={`${message._id}-attachment-${index}`}
+                          className="relative h-36 w-full overflow-hidden rounded-2xl sm:h-40"
+                        >
+                          <Image
+                            src={attachment}
+                            alt={`Imagen ${index + 1} enviada`}
+                            fill
+                            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 45vw, 320px"
+                            className="object-cover"
+                            unoptimized
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                  {hasText ? <p className="whitespace-pre-wrap break-words">{message.content}</p> : null}
+                  <span className="block text-right text-xs text-[#8a93b8]">
+                    {new Date(message.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  </span>
                 </div>
               </div>
             );
           })}
-          <div id="message-end-anchor" />
+          <div ref={messageEndRef} />
         </div>
         <form className="border-t border-[#dbe1f7] bg-white/80 px-6 py-4 backdrop-blur" onSubmit={handleSendMessage}>
-          <div className="flex items-end gap-4">
+          <input
+            ref={galleryInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleAttachmentSelection}
+            className="hidden"
+          />
+          <input
+            ref={cameraInputRef}
+            type="file"
+            accept="image/*"
+            capture="user"
+            onChange={handleAttachmentSelection}
+            className="hidden"
+          />
+          <div className="flex flex-wrap items-center gap-3 pb-3 sm:justify-between">
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => galleryInputRef.current?.click()}
+                disabled={isSending || attachments.length >= MAX_TOTAL_ATTACHMENTS}
+                className="text-sm"
+              >
+                Galería
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => cameraInputRef.current?.click()}
+                disabled={isSending || attachments.length >= MAX_TOTAL_ATTACHMENTS}
+                className="text-sm"
+              >
+                Cámara frontal
+              </Button>
+            </div>
+            <span className="text-xs text-[#7a809c]">
+              {attachments.length}/{MAX_TOTAL_ATTACHMENTS} fotos adjuntas
+            </span>
+          </div>
+          {attachments.length > 0 ? (
+            <div className="mb-3 grid gap-3 sm:grid-cols-2 md:grid-cols-4">
+              {attachments.map((preview, index) => (
+                <div
+                  key={`pending-attachment-${index}`}
+                  className="relative h-28 overflow-hidden rounded-2xl border border-[#dbe1f7] bg-white/70 sm:h-32"
+                >
+                  <Image
+                    src={preview}
+                    alt={`Vista previa ${index + 1}`}
+                    fill
+                    sizes="(max-width: 640px) 100vw, 25vw"
+                    className="object-cover"
+                    unoptimized
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveAttachment(index)}
+                    className="absolute right-2 top-2 z-10 rounded-full bg-black/60 px-2 py-1 text-xs text-white hover:bg-black/80"
+                    aria-label={`Quitar imagen ${index + 1}`}
+                  >
+                    Quitar
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : null}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
             <Input
               label="Mensaje"
               placeholder="Escribe algo amable..."
@@ -268,7 +456,13 @@ const ChatThreadPage: React.FC = () => {
               onChange={handleMessageChange}
               className="flex-1"
             />
-            <Button type="submit" variant="primary" isLoading={isSending} disabled={messageInput.trim().length === 0} className="min-w-28">
+            <Button
+              type="submit"
+              variant="primary"
+              isLoading={isSending}
+              disabled={isSending || (messageInput.trim().length === 0 && attachments.length === 0)}
+              className="min-w-28"
+            >
               Enviar
             </Button>
           </div>
