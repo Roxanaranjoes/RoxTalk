@@ -13,6 +13,9 @@ interface SocketContextValue {
   unreadCounts: UnreadCountMap;
   latestMessages: LatestMessageMap;
   markConversationAsRead: (userId: string) => void;
+  notificationPermission: NotificationPermission;
+  isNotificationSupported: boolean;
+  requestNotificationPermission: () => Promise<NotificationPermission>;
 }
 
 const SocketContext = createContext<SocketContextValue | undefined>(undefined);
@@ -24,6 +27,110 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [typingState, setTypingState] = useState<TypingState>({});
   const [unreadCounts, setUnreadCounts] = useState<UnreadCountMap>({});
   const [latestMessages, setLatestMessages] = useState<LatestMessageMap>({});
+  const getInitialNotificationPermission = (): NotificationPermission => {
+    if (typeof window === "undefined" || !("Notification" in window)) {
+      return "default";
+    }
+    return window.Notification.permission;
+  };
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>(getInitialNotificationPermission);
+  const [isNotificationSupported, setIsNotificationSupported] = useState<boolean>(() => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+    return "Notification" in window;
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const supported = "Notification" in window;
+    setIsNotificationSupported(supported);
+    if (supported) {
+      setNotificationPermission(window.Notification.permission);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof document === "undefined" || typeof window === "undefined" || !isNotificationSupported) {
+      return;
+    }
+    const syncPermission = () => {
+      setNotificationPermission(window.Notification.permission);
+    };
+    document.addEventListener("visibilitychange", syncPermission);
+    return () => {
+      document.removeEventListener("visibilitychange", syncPermission);
+    };
+  }, [isNotificationSupported]);
+
+  const requestNotificationPermission = useCallback(async (): Promise<NotificationPermission> => {
+    if (typeof window === "undefined" || !("Notification" in window)) {
+      setIsNotificationSupported(false);
+      setNotificationPermission("denied");
+      return "denied";
+    }
+    try {
+      const permission = await window.Notification.requestPermission();
+      setNotificationPermission(permission);
+      return permission;
+    } catch {
+      setNotificationPermission("denied");
+      return "denied";
+    }
+  }, []);
+
+  const showNativeNotification = useCallback(
+    (message: ChatMessage) => {
+      if (!user) {
+        return;
+      }
+      if (typeof window === "undefined" || typeof document === "undefined") {
+        return;
+      }
+      if (!isNotificationSupported || notificationPermission !== "granted") {
+        return;
+      }
+      if (message.fromUserId === user._id) {
+        return;
+      }
+      const currentPath = window.location.pathname;
+      if (document.visibilityState === "visible" && currentPath === `/chat/${message.fromUserId}`) {
+        return;
+      }
+      const hasAttachments = Array.isArray(message.attachments) && message.attachments.length > 0;
+      const trimmedContent = message.content ? message.content.trim() : "";
+      const snippet =
+        trimmedContent.length > 0
+          ? trimmedContent.slice(0, 120)
+          : hasAttachments
+          ? "Te enviaron una imagen."
+          : "Nuevo mensaje para ti.";
+      const options: NotificationOptions = {
+        body: snippet,
+        tag: message._id,
+        renotify: false,
+        data: { fromUserId: message.fromUserId }
+      };
+      if (hasAttachments) {
+        options.image = message.attachments[0];
+      }
+      try {
+        const notification = new window.Notification("Nuevo mensaje", options);
+        notification.onclick = () => {
+          window.focus();
+          const target = `/chat/${message.fromUserId}`;
+          if (window.location.pathname !== target) {
+            window.location.href = target;
+          }
+        };
+      } catch (error) {
+        console.warn("[notifications] failed to display notification", error);
+      }
+    },
+    [isNotificationSupported, notificationPermission, user]
+  );
 
   useEffect(() => {
     if (!user) {
@@ -90,6 +197,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           [normalizedMessage.fromUserId]: (previous[normalizedMessage.fromUserId] || 0) + 1
         }));
       }
+      showNativeNotification(normalizedMessage);
     };
 
     nextSocket.on("user:online", handleUserOnline);
@@ -121,7 +229,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       nextSocket.off("disconnect");
       nextSocket.disconnect();
     };
-  }, [user]);
+  }, [user, showNativeNotification]);
 
   const markConversationAsRead = useCallback((userId: string) => {
     setUnreadCounts((previous) => {
@@ -138,9 +246,22 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       typingState,
       unreadCounts,
       latestMessages,
-      markConversationAsRead
+      markConversationAsRead,
+      notificationPermission,
+      isNotificationSupported,
+      requestNotificationPermission
     }),
-    [socket, onlineUsers, typingState, unreadCounts, latestMessages, markConversationAsRead]
+    [
+      socket,
+      onlineUsers,
+      typingState,
+      unreadCounts,
+      latestMessages,
+      markConversationAsRead,
+      notificationPermission,
+      isNotificationSupported,
+      requestNotificationPermission
+    ]
   );
 
   return <SocketContext.Provider value={value}>{children}</SocketContext.Provider>;

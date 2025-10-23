@@ -11,6 +11,7 @@ import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Modal } from "../../components/ui/Modal";
 import { TextArea } from "../../components/ui/TextArea";
+import { Toast } from "../../components/Toast";
 
 const MAX_AVATAR_SIZE_MB = 12;
 const MAX_AVATAR_BYTES = MAX_AVATAR_SIZE_MB * 1024 * 1024;
@@ -40,7 +41,17 @@ const convertFileToDataUrl = (file: File): Promise<string> => {
 const ChatLobbyPage: React.FC = () => {
   const router = useRouter();
   const { user, isLoading, logout, updateProfile } = useAuth();
-  const { onlineUsers, unreadCounts, typingState, latestMessages, markConversationAsRead, socket } = useSocket();
+  const {
+    onlineUsers,
+    unreadCounts,
+    typingState,
+    latestMessages,
+    markConversationAsRead,
+    socket,
+    notificationPermission,
+    isNotificationSupported,
+    requestNotificationPermission
+  } = useSocket();
 
   const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -59,6 +70,12 @@ const ChatLobbyPage: React.FC = () => {
   const avatarStreamRef = useRef<MediaStream | null>(null);
   const [viewingContact, setViewingContact] = useState<User | null>(null);
   const [isContactModalOpen, setIsContactModalOpen] = useState<boolean>(false);
+  const [notificationPromptDismissed, setNotificationPromptDismissed] = useState<boolean>(false);
+  const [toastMessage, setToastMessage] = useState<string>("");
+  const [toastVariant, setToastVariant] = useState<"info" | "success" | "error">("info");
+  const shouldShowNotificationPrompt =
+    isNotificationSupported && notificationPermission === "default" && !notificationPromptDismissed;
+  const notificationBlocked = isNotificationSupported && notificationPermission === "denied";
 
   useEffect(() => {
     if (isLoading) {
@@ -156,6 +173,32 @@ const ChatLobbyPage: React.FC = () => {
       avatarStreamRef.current = null;
     };
   }, []);
+
+  const handleEnableNotifications = async (): Promise<void> => {
+    if (!isNotificationSupported) {
+      setToastVariant("error");
+      setToastMessage("Tu navegador no admite notificaciones.");
+      setNotificationPromptDismissed(true);
+      return;
+    }
+    const permission = await requestNotificationPermission();
+    if (permission === "granted") {
+      setToastVariant("success");
+      setToastMessage("Notificaciones activadas. Te avisaremos cuando lleguen mensajes nuevos.");
+      setNotificationPromptDismissed(true);
+    } else if (permission === "denied") {
+      setToastVariant("error");
+      setToastMessage("Tu navegador bloqueó las notificaciones. Actívalas desde la configuración del sitio para recibir avisos.");
+      setNotificationPromptDismissed(true);
+    } else {
+      setToastVariant("info");
+      setToastMessage("Puedes activar las notificaciones más tarde desde la configuración del navegador.");
+    }
+  };
+
+  const handleDismissToast = (): void => {
+    setToastMessage("");
+  };
 
   const openProfileModal = (): void => {
     if (!user) {
@@ -353,6 +396,32 @@ const ChatLobbyPage: React.FC = () => {
 
   return (
     <div className="flex min-h-screen flex-col gap-8 px-6 py-10">
+      {toastMessage ? (
+        <Toast message={toastMessage} variant={toastVariant} onClose={handleDismissToast} />
+      ) : null}
+      {shouldShowNotificationPrompt ? (
+        <div className="flex flex-col gap-3 rounded-3xl border border-dashed border-sky-200/70 bg-white/80 px-6 py-4 text-[#4b5375] shadow-lg shadow-[rgba(147,170,204,0.2)]">
+          <div>
+            <h2 className="text-base font-semibold text-[var(--rt-foreground)]">Activa las notificaciones</h2>
+            <p className="text-sm text-[#6f7a9c]">
+              Recibe avisos cuando lleguen mensajes nuevos, incluso si estás en otra pestaña.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="primary" onClick={handleEnableNotifications}>
+              Activar notificaciones
+            </Button>
+            <Button type="button" variant="ghost" onClick={() => setNotificationPromptDismissed(true)}>
+              Ahora no
+            </Button>
+          </div>
+        </div>
+      ) : null}
+      {notificationBlocked ? (
+        <div className="rounded-3xl border border-rose-200 bg-rose-50/90 px-6 py-4 text-sm text-[#7c2430] shadow-inner shadow-[rgba(228,120,138,0.15)]">
+          Has bloqueado las notificaciones del navegador. Actívalas desde la configuración del sitio para recibir avisos.
+        </div>
+      ) : null}
       <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-4xl font-semibold text-[var(--rt-foreground)]">Tus conversaciones</h1>
