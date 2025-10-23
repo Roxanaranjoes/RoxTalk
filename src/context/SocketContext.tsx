@@ -33,7 +33,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
     return window.Notification.permission;
   };
-  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>(getInitialNotificationPermission);
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>(() => getInitialNotificationPermission());
   const [isNotificationSupported, setIsNotificationSupported] = useState<boolean>(() => {
     if (typeof window === "undefined") {
       return false;
