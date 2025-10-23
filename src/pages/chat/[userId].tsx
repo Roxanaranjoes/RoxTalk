@@ -51,6 +51,7 @@ const ChatThreadPage: React.FC = () => {
   const galleryInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const messageEndRef = useRef<HTMLDivElement | null>(null);
+  const [isDragOver, setIsDragOver] = useState<boolean>(false);
 
   useEffect(() => {
     if (isLoading) {
@@ -146,9 +147,7 @@ const ChatThreadPage: React.FC = () => {
     messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const handleAttachmentSelection = async (event: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
-    const files = Array.from(event.target.files ?? []);
-    event.target.value = "";
+  const processSelectedFiles = async (files: File[]): Promise<void> => {
     if (files.length === 0) {
       return;
     }
@@ -161,7 +160,6 @@ const ChatThreadPage: React.FC = () => {
 
     const collected: string[] = [];
     const errors: string[] = [];
-
     for (const file of files) {
       if (collected.length >= availableSlots) {
         break;
@@ -188,14 +186,56 @@ const ChatThreadPage: React.FC = () => {
     if (errors.length > 0) {
       setToastVariant("error");
       setToastMessage(errors.join(" "));
+    } else if (collected.length > 0) {
+      setToastVariant("success");
+      setToastMessage(collected.length === 1 ? "Se agregó 1 imagen." : `Se agregaron ${collected.length} imágenes.`);
     } else {
       setToastMessage("");
     }
   };
 
+  const handleAttachmentSelection = async (event: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
+    const files = Array.from(event.target.files ?? []);
+    event.target.value = "";
+    await processSelectedFiles(files);
+  };
+
   const handleRemoveAttachment = (index: number): void => {
     setAttachments((previous) => previous.filter((_, currentIndex) => currentIndex !== index));
     setToastMessage("");
+  };
+
+  const handleDragEnter = (event: React.DragEvent<HTMLDivElement>): void => {
+    event.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragOver = (event: React.DragEvent<HTMLDivElement>): void => {
+    event.preventDefault();
+    if (!isDragOver) {
+      setIsDragOver(true);
+    }
+  };
+
+  const handleDragLeave = (event: React.DragEvent<HTMLDivElement>): void => {
+    event.preventDefault();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = async (event: React.DragEvent<HTMLDivElement>): Promise<void> => {
+    event.preventDefault();
+    setIsDragOver(false);
+    const files = Array.from(event.dataTransfer?.files ?? []);
+    await processSelectedFiles(files);
+  };
+
+  const handleInputPaste = async (event: React.ClipboardEvent<HTMLInputElement>): Promise<void> => {
+    const files = Array.from(event.clipboardData?.files ?? []);
+    if (files.length === 0) {
+      return;
+    }
+    event.preventDefault();
+    await processSelectedFiles(files);
   };
 
   const handleMessageChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
@@ -421,39 +461,55 @@ const ChatThreadPage: React.FC = () => {
               {attachments.length}/{MAX_TOTAL_ATTACHMENTS} fotos adjuntas
             </span>
           </div>
-          {attachments.length > 0 ? (
-            <div className="mb-3 grid gap-3 sm:grid-cols-2 md:grid-cols-4">
-              {attachments.map((preview, index) => (
-                <div
-                  key={`pending-attachment-${index}`}
-                  className="relative h-28 overflow-hidden rounded-2xl border border-[#dbe1f7] bg-white/70 sm:h-32"
-                >
-                  <Image
-                    src={preview}
-                    alt={`Vista previa ${index + 1}`}
-                    fill
-                    sizes="(max-width: 640px) 100vw, 25vw"
-                    className="object-cover"
-                    unoptimized
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveAttachment(index)}
-                    className="absolute right-2 top-2 z-10 rounded-full bg-black/60 px-2 py-1 text-xs text-white hover:bg-black/80"
-                    aria-label={`Quitar imagen ${index + 1}`}
+          <div
+            className={`mb-3 flex flex-col gap-3 rounded-3xl border border-dashed border-[#dbe1f7] bg-white/70 px-4 py-4 text-sm text-[#6f7a9c] transition-colors ${
+              isDragOver ? "border-[#8aa4f6] bg-[#f4f7ff]" : ""
+            }`}
+            onDragEnter={handleDragEnter}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
+            {attachments.length > 0 ? (
+              <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-4">
+                {attachments.map((preview, index) => (
+                  <div
+                    key={`pending-attachment-${index}`}
+                    className="relative h-28 overflow-hidden rounded-2xl border border-[#dbe1f7] bg-white/70 sm:h-32"
                   >
-                    Quitar
-                  </button>
-                </div>
-              ))}
-            </div>
-          ) : null}
+                    <Image
+                      src={preview}
+                      alt={`Vista previa ${index + 1}`}
+                      fill
+                      sizes="(max-width: 640px) 100vw, 25vw"
+                      className="object-cover"
+                      unoptimized
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveAttachment(index)}
+                      className="absolute right-2 top-2 z-10 rounded-full bg-black/60 px-2 py-1 text-xs text-white hover:bg-black/80"
+                      aria-label={`Quitar imagen ${index + 1}`}
+                    >
+                      Quitar
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs sm:text-sm">
+                Arrastra imágenes desde tu computadora, pégalas con Ctrl+V o usa los botones para añadir fotos desde tu
+                dispositivo.
+              </p>
+            )}
+          </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
             <Input
               label="Mensaje"
               placeholder="Escribe algo amable..."
               value={messageInput}
               onChange={handleMessageChange}
+              onPaste={handleInputPaste}
               className="flex-1"
             />
             <Button
