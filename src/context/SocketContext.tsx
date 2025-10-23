@@ -110,11 +110,13 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const options: NotificationOptions = {
         body: snippet,
         tag: message._id,
-        renotify: false,
         data: { fromUserId: message.fromUserId }
       };
       if (hasAttachments) {
-        options.image = message.attachments[0];
+        const [firstAttachment] = message.attachments;
+        if (firstAttachment) {
+          (options as NotificationOptions & { image?: string }).image = firstAttachment;
+        }
       }
       try {
         const notification = new window.Notification("Nuevo mensaje", options);
